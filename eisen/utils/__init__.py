@@ -19,7 +19,7 @@ def merge_two_dicts(x, y):
 
 def read_json_from_file(json_file):
     if not os.path.exists(json_file):
-        raise FileNotFoundError('The JSON file {} cannot be read'.format(json_file))
+        raise FileNotFoundError("The JSON file {} cannot be read".format(json_file))
 
     with open(json_file) as json_file:
         dictionary = json.load(json_file)
@@ -82,7 +82,10 @@ def _partition_idx_weight_list(weights, idx=None):
     if idx is None:
         return [np.asarray(range(0, i, 1)), np.asarray(range(i, len(weights), 1))]
     else:
-        return [np.asarray(idx[range(0, i, 1)]), np.asarray(idx[range(i, len(weights), 1)])]
+        return [
+            np.asarray(idx[range(0, i, 1)]),
+            np.asarray(idx[range(i, len(weights), 1)]),
+        ]
 
 
 def _get_n_idx_partitions(weights, n):
@@ -153,13 +156,14 @@ class EisenModuleWrapper(Module):
         adapted_module = EisenModuleWrapper(module, ['image'], ['prediction'])
 
     """
+
     def __init__(self, module, input_names, output_names):
         """
         :param module: This is a Module instance
         :type module: torch.nn.Module
-        :param input_names: list of strings corresponding to batch keys, to be supplied to the module positionally
+        :param input_names: list of names for positional arguments of module. Must match field names in data batches
         :type input_names: list of str
-        :param output_names: list of strings corresponding to output dictionary keys to hold module outputs
+        :param output_names: list of names for the outputs of the module
         :type output_names: list of str
         """
         super(EisenModuleWrapper, self).__init__()
@@ -169,19 +173,15 @@ class EisenModuleWrapper(Module):
 
         self.module = module
 
-        module_argument_list = inspect.getfullargspec(self.module.forward)[0]
+    def forward(self, *args, **kwargs):
+        input_list = list(args)
+        n_args = len(input_list)
 
-        module_argument_list.remove('self')
+        for key in kwargs.keys():
+            if key in self.input_names[n_args:]:
+                input_list.append(kwargs[key])
 
-        self.module_argument_list = module_argument_list
-
-    def forward(self, **kwargs):
-        input_dict = {}
-
-        for dst_arg, src_arg in zip(self.module_argument_list, self.input_names):
-            input_dict[dst_arg] = kwargs[src_arg]
-
-        outputs = self.module(**input_dict)
+        outputs = self.module(*input_list)
 
         if not isinstance(outputs, (list, tuple)):
             outputs = (outputs,)
@@ -219,6 +219,7 @@ class EisenTransformWrapper:
         adapted_transform = EisenTransformWrapper(transform, ['image'])
 
     """
+
     def __init__(self, transform, fields):
         super(EisenTransformWrapper, self).__init__()
         self.fields = fields
@@ -227,7 +228,7 @@ class EisenTransformWrapper:
 
     def __call__(self, data):
         for field in self.fields:
-           data[field] = self.transform(data[field])
+            data[field] = self.transform(data[field])
 
         return data
 
@@ -286,13 +287,13 @@ class EisenDatasetWrapper(Dataset):
 
 class EisenDatasetSplitter:
     def __init__(
-            self,
-            fraction_train,
-            fraction_valid=None,
-            fraction_test=None,
-            transform_train=None,
-            transform_valid=None,
-            transform_test=None
+        self,
+        fraction_train,
+        fraction_valid=None,
+        fraction_test=None,
+        transform_train=None,
+        transform_valid=None,
+        transform_test=None,
     ):
         if fraction_train <= 1.0 and fraction_valid is None and fraction_test is None:
             self.fraction_train = fraction_train
@@ -332,7 +333,7 @@ class EisenDatasetSplitter:
         else:
             data_test = None
 
-        list_valid = perm[limit_test: limit_validation].tolist()
+        list_valid = perm[limit_test:limit_validation].tolist()
 
         if len(list_valid) > 0:
             data_validation = [data[k] for k in list_valid]
@@ -381,6 +382,7 @@ class PipelineExecutionStreamer(torch.nn.Module):
     More details about this idea can be found here:
     https://pytorch.org/tutorials/intermediate/model_parallel_tutorial.html#speed-up-by-pipelining-inputs
     """
+
     def __init__(self, operations_sequence, split_size):
         """
         :param operations_sequence: A list containing operations that should be done in sequence
@@ -461,7 +463,8 @@ class ModelParallel(Module):
 
         # model is ModelParallel and will execute on multiple GPUs
 
-        """
+    """
+
     def __init__(self, module, split_size, device_ids=None, output_device=None):
         """
         This method instantiates a ModelParallel Module from a module instance passed by the user. The
@@ -498,7 +501,7 @@ class ModelParallel(Module):
         module_argument_list = inspect.getfullargspec(module.forward)[0]
 
         if len(module_argument_list) > 2:
-            raise NotImplementedError('Support for modules with more than one input is not yet implemented.')
+            raise NotImplementedError("Support for modules with more than one input is not yet implemented.")
 
         self.first_run = True
         self.split_size = split_size
@@ -568,4 +571,3 @@ class ModelParallel(Module):
         outputs = self.module(x).to(self.output_device)
 
         return outputs
-

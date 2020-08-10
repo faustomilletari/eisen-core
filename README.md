@@ -1,5 +1,13 @@
 # README
 
+## Status
+
+![PyTest](https://github.com/eisen-ai/eisen-core/workflows/PyTest/badge.svg?branch=master)
+![Eisen Docker](https://github.com/eisen-ai/eisen/workflows/Docker/badge.svg?branch=master)
+![Auto Docs](https://github.com/eisen-ai/eisen-docs/workflows/Publish%20Docs/badge.svg)
+
+## Description
+
 Eisen is a package that consists of popular datasets, 
 model architectures, data loading functions, common image 
 transformations, training, testing and validation work-flows
