@@ -32,8 +32,8 @@ def convert_output_dict_to_cpu(output_dict):
 
 class EpochDataAggregator:
     def __init__(self, workflow_id):
-        self.best_avg_loss = 10 ** 10
-        self.best_avg_metric = -(10 ** 10)
+        self.best_avg_loss = float("inf")
+        self.best_avg_metric = float("-inf")
         self.workflow_id = workflow_id
 
     def __enter__(self):
@@ -49,7 +49,7 @@ class EpochDataAggregator:
 
         for typ in ["losses", "metrics"]:
             if typ not in self.epoch_data.keys():
-                self.epoch_data[typ] = [{}] * len(output_dictionary[typ])
+                self.epoch_data[typ] = [{} for _ in range(len(output_dictionary[typ]))]
 
             for i in range(len(output_dictionary[typ])):
                 for key in output_dictionary[typ][i].keys():
@@ -81,8 +81,7 @@ class EpochDataAggregator:
                             # whole epoch instead of only one batch
                             if output_dictionary[typ][key].ndim == 0:
                                 output_dictionary[typ][key] = output_dictionary[typ][key][np.newaxis]
-
-                            if output_dictionary[typ][key].ndim == 1:
+                            elif output_dictionary[typ][key].ndim == 1:
                                 self.epoch_data[typ][key] = np.concatenate(
                                     [self.epoch_data[typ][key], output_dictionary[typ][key],], axis=0,
                                 )
