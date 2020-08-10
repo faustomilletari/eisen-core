@@ -1,5 +1,6 @@
 import os
 import torch
+import copy
 
 from torch.utils.data import Dataset
 from eisen.utils import read_json_from_file
